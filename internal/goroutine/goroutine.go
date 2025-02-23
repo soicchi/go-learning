@@ -6,16 +6,15 @@ import (
 	"time"
 )
 
-
-
 func Goroutine() {
-	withNoBuffer()
+	// withNoBuffer()
+	withBuffer()
 }
 
 func withNoBuffer() {
-	// with no buffer
 	ch := make(chan int)
 	var wg sync.WaitGroup
+
 	wg.Add(1)
 
 	go func() {
@@ -26,6 +25,32 @@ func withNoBuffer() {
 	}()
 
 	fmt.Println(<-ch)
+
+	wg.Wait()
+}
+
+func withBuffer() {
+	ch := make(chan int, 3)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < 3; i++ {
+			ch <- 1
+			fmt.Println("sent")
+			time.Sleep(1 * time.Second)
+		}
+
+		close(ch)
+	}()
+
+	for v := range ch {
+		fmt.Println(v)
+		fmt.Println("received")
+	}
 
 	wg.Wait()
 }
