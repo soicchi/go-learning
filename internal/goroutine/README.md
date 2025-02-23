@@ -2,6 +2,23 @@
 
 ゴルーチンやチャネルについて
 
+# Goroutionの仕組み
+
+```mermaid
+flowchart
+
+A["func main()"] --go Func1()--> B["func Func1()"]
+A --go Func2()--> C["func Func2()"]
+B --go Func3()--> D["func Func3()"]
+B --go Func4()--> E["func Func4()"]
+C --go Func5()--> F["func Func5()"]
+C --go Func6()--> G["func Func6()"]
+```
+
+main()が実行されるとメインゴルーチンが生成される。
+そこからgoのprefixをつけて関数が呼ばれると新たにgoroutineを生成する。
+main()の処理が終了するとすべてのgoroutineは強制的に終了する。
+
 # channelの送信側と受信側の動作
 
 channelにbufferが設定された場合とされてない場合の動作の違いについて説明する。
