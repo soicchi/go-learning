@@ -8,8 +8,8 @@ channelにbufferが設定された場合とされてない場合の動作の違�
 
 ## channelにbufferが設定されていない場合
 
-- 受信側の処理(<-ch)は送信側がchannelにデータを入れるまでブロックされる
-- 送信側の処理(ch <- 1)は受信側が値を受け取るまでブロックされる
+- 受信側の処理(<-ch)は送信側がchannelにデータを入れる(ch <- 1)までブロックされる
+- 送信側の処理(ch <- 1)は受信側が値を受け取る(<-ch)までブロックされる
 
 **sample code**
 ```go
@@ -74,7 +74,9 @@ F --❌--> H
 G --> H[main関数の処理終了]
 ```
 
-もし`goroutine2`の処理を完了させてからmain関数の処理を完了させたい場合は`sync.WaitGroup`を利用する。
+Go の main() は "メインゴルーチン" として動作し、main() の処理が終了すると、すべてのゴルーチンが強制終了する。
+
+そのため、`sync.WaitGroup` を使用してゴルーチンの完了を待つことで、main() の終了を防ぐ。
 
 ```go
 func main() {
@@ -85,7 +87,7 @@ func main() {
 
     // goroutine2が生成される
 	go func() {
-		defer wg.Done() // wgのcounterを1増やす
+		defer wg.Done() // wgのcounterを1減らす
 		ch <- 1
 		time.Sleep(5 * time.Second)
 		fmt.Println("completed sending")
@@ -93,7 +95,7 @@ func main() {
 
 	fmt.Println(<-ch)
 
-	wg.Wait() // wgのcounterが1になるまで待機
+	wg.Wait() // wgのcounterが0になるまで待機
 }
 ```
 
@@ -138,10 +140,10 @@ func main() {
 			time.Sleep(1 * time.Second)
 		}
 
-		close(ch)
+		close(ch) // 受信側に値がもう入ってこないことを知らせる
 	}()
 
-	for v := range ch {
+	for v := range ch { // chがcloseされてない場合、ずっと待ち続けることになる。
 		fmt.Println(v)
 		fmt.Println("received")
 	}
@@ -149,3 +151,5 @@ func main() {
 	wg.Wait()
 }
 ```
+
+bufferがあるチャネルを利用している場合、chをcloseしないと受信側でchの送信をずっと待ち続けることになるため注意が必要。
