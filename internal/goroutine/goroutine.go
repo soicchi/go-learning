@@ -9,7 +9,8 @@ import (
 func Goroutine() {
 	// withNoBuffer()
 	// withBuffer()
-	deadlock()
+	// deadlock()
+	noDeadlock()
 }
 
 func withNoBuffer() {
@@ -70,5 +71,27 @@ func deadlock() {
 	v := 2
 	ch2 <- v
 	v1 := <-ch1
+	fmt.Println(v, v1)
+}
+
+func noDeadlock() {
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+
+	go func() {
+		v := 1
+		ch1 <- v
+		v2 := <-ch2
+		fmt.Println(v, v2)
+	}()
+
+	v := 2
+	var v1 int
+
+	select {
+	case ch2 <- v:
+	case v1 = <-ch1:
+	}
+
 	fmt.Println(v, v1)
 }

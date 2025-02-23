@@ -254,3 +254,40 @@ end
 H --❌--> I[main関数終了]
 G --❌--> I
 ```
+
+## デッドロックを起こさないようにする方法
+
+`select`を利用する。
+
+```go
+func main() {
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+
+    // goroutine2
+	go func() {
+		v := 1
+		ch1 <- v
+		v2 := <-ch2
+		fmt.Println(v, v2) // 呼ばれない
+	}()
+
+	v := 2
+	var v1 int
+
+	select {
+	case ch2 <- v:
+	case v1 = <-ch1: // 受信できる状態であれば発火
+	}
+
+	fmt.Println(v, v1)
+}
+```
+
+```sh
+2 1
+```
+
+`select`はcaseで定義された中から実行可能なものを選択するので`v1 = <-ch1`が選択されデッドロックにならない。
+
+ただしこの場合、goroutine2の`v2 := <-ch2`で処理がブロックするので、`fmt.Println(v, v2)`は実行されない。
