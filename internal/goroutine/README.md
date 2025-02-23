@@ -15,9 +15,11 @@ C --go Func5()--> F["func Func5()"]
 C --go Func6()--> G["func Func6()"]
 ```
 
-main()が実行されるとメインゴルーチンが生成される。
-そこからgoのprefixをつけて関数が呼ばれると新たにgoroutineを生成する。
-main()の処理が終了するとすべてのgoroutineは強制的に終了する。
+`main()`が実行されるとメインゴルーチンが生成される。
+
+そこから`go`のprefixをつけて関数が呼ばれると新たにgoroutineを生成する。
+
+`main()`の処理が終了するとすべてのgoroutineは強制的に終了する。
 
 # channelの送信側と受信側の動作
 
