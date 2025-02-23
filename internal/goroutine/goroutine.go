@@ -8,7 +8,8 @@ import (
 
 func Goroutine() {
 	// withNoBuffer()
-	withBuffer()
+	// withBuffer()
+	deadlock()
 }
 
 func withNoBuffer() {
@@ -53,4 +54,21 @@ func withBuffer() {
 	}
 
 	wg.Wait()
+}
+
+func deadlock() {
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+
+	go func() {
+		v := 1
+		ch1 <- v
+		v2 := <-ch2
+		fmt.Println(v, v2)
+	}()
+
+	v := 2
+	ch2 <- v
+	v1 := <-ch1
+	fmt.Println(v, v1)
 }

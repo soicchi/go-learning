@@ -171,4 +171,86 @@ func main() {
 }
 ```
 
-bufferがあるチャネルを利用している場合、chをcloseしないと受信側でchの送信をずっと待ち続けることになるため注意が必要。
+# channelに対してfor-rangeループを利用する際の注意点
+
+channelに対して`for-range`を利用する際はchannelを`close`するか、ループを`break` or `return`で抜けよう。
+
+一般的なループと異なるchannelをfor-rangeループする場合、宣言できる引数は1つのみ
+
+```go
+// 一般的なfor-range
+items := []int{1,2,3}
+
+for i, num := range items { // i, numの二つの変数を宣言できる
+    fmt.Println(i)
+    fmt.Println(num)
+}
+
+
+// channelのfor-range
+ch := make(chan int, 3)
+
+// do something to add value to ch
+close(ch) // channelをcloseしないと、以下のfor-rangeループが回り続けてしまう
+
+for v := range ch { // v(channelに入っている値)のみ宣言可能
+    fmt.Println(v)
+}
+```
+
+channelを利用してfor-rangeループを行う場合、そのchannelが`close`されるかループが`break` or `return`されるまでループされる。
+
+なので明示的に`close(ch)`や`break` or `return`を記載していないのでループが回り続けてしまう。
+
+# デッドロック
+
+複数のchannelを利用している場合、デットロックの可能性を考慮しなければならない。
+
+```go
+func main() {
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+
+    // goroutine2
+	go func() {
+		v := 1
+		ch1 <- v // ch1から値が受け取られるまで待機
+		v2 := <-ch2 // ch2に値が入るまで待機
+		fmt.Println(v, v2)
+	}()
+
+	v := 2
+	ch2 <- v // ch2から値が受け取られるまで待機
+	v1 := <-ch1 // ch1に値が入るまで待機
+	fmt.Println(v, v1)
+}
+```
+
+main goroutineがch2から値が受け取られるまで`ch2 <- v`以降の処理をブロックし、
+
+goroutine2ではch1から値が受け取られるまで`ch1 <- v`以降の処理をブロックする。
+
+そのため二つのgoroutine間で処理がブロックされてしまいデッドロックになる。
+
+```mermaid
+flowchart
+
+subgraph main goroutine
+A[main関数実行] --> B[goroutine2生成]
+B --> J[ch2にvを入れる]
+J --> C[ch2から値が受け取られるまで待機]
+C --❌deadlock--> E[ch2に値が入るまで待機]
+E --❌--> L[ch1に値が入ってくるまで待機]
+L --❌--> M[ch1から値を取得してv1に代入]
+M --❌--> H[v, v1出力]
+end
+subgraph goroutine2
+B --> K[ch1にvを入れる]
+K --> D[ch1から値が受け取られるまで待機]
+D --❌deadlock--> F[ch2に値が入るまで待機]
+F --❌--> N[ch2から値を受け取りv2に代入]
+N --❌--> G[v, v2出力]
+end
+H --❌--> I[main関数終了]
+G --❌--> I
+```
